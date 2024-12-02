@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     wget \
     dbus-x11 \
+    firefox-esr \
     --no-install-recommends
 
 # Create a non-root user
