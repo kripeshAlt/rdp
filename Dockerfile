@@ -1,49 +1,44 @@
-# Use Ubuntu as the base image
-FROM ubuntu:20.04
-
-# Update the package list and install necessary packages
-RUN apt-get update && apt-get install -y \
-    xfce4 xfce4-goodies \
-    x11vnc \
-    xvfb \
-    supervisor \
-    net-tools \
-    noVNC websockify \
-    firefox \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get -o Dpkg::Options::="--force-confold" install -y \
-    xfce4 xfce4-goodies \
-    x11vnc \
-    xvfb \
-    supervisor \
-    net-tools \
-    noVNC websockify \
-    firefox
-
-
-# Install noVNC
-RUN git clone https://github.com/novnc/noVNC.git /opt/noVNC \
-    && ln -s /opt/noVNC/vnc.html /opt/noVNC/index.html
-
-# Add a user for the VNC server
-RUN useradd -m vncuser
+# Base image: Ubuntu 22.04
+FROM ubuntu:22.04
 
 # Set environment variables
-ENV USER=vncuser \
-    DISPLAY=:1 \
-    VNC_PORT=5901 \
-    NO_VNC_PORT=6080 \
-    RESOLUTION=1024x768
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DISPLAY=:1
 
-# Expose the ports for VNC and noVNC
-EXPOSE 5901 6080
+# Update and install necessary packages
+RUN apt-get update && apt-get install -y \
+    sudo \
+    xfce4 \
+    xfce4-goodies \
+    novnc \
+    websockify \
+    x11vnc \
+    xserver-xorg-core \
+    supervisor \
+    curl \
+    wget \
+    dbus-x11 \
+    --no-install-recommends
 
-# Copy supervisor configuration file
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Create a non-root user
+RUN useradd -m -s /bin/bash renderuser && echo "renderuser:renderpass" | chpasswd && adduser renderuser sudo
 
-# Copy startup script
-COPY startup.sh /usr/local/bin/startup.sh
-RUN chmod +x /usr/local/bin/startup.sh
+# Install noVNC
+RUN mkdir -p /opt/novnc/utils/websockify && \
+    curl -L https://github.com/novnc/noVNC/archive/refs/tags/v1.3.0.tar.gz | tar xz --strip-components=1 -C /opt/novnc && \
+    curl -L https://github.com/novnc/websockify/archive/refs/tags/v0.11.0.tar.gz | tar xz --strip-components=1 -C /opt/novnc/utils/websockify && \
+    chmod +x /opt/novnc/utils/*.sh
 
-# Start the services
-CMD ["/usr/bin/supervisord"]
+# Configure X11VNC
+RUN mkdir -p ~/.vnc && \
+    x11vnc -storepasswd renderpass ~/.vnc/passwd
+
+# Configure Supervisor
+RUN mkdir -p /etc/supervisor/conf.d
+COPY supervisord.conf /etc/supervisor/supervisord.conf
+
+# Expose necessary ports
+EXPOSE 8080 5901
+
+# Start the Supervisor service
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
