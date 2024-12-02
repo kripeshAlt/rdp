@@ -10,7 +10,16 @@ RUN apt-get update && apt-get install -y \
     net-tools \
     noVNC websockify \
     firefox \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get -o Dpkg::Options::="--force-confold" install -y \
+    xfce4 xfce4-goodies \
+    x11vnc \
+    xvfb \
+    supervisor \
+    net-tools \
+    noVNC websockify \
+    firefox
+
 
 # Install noVNC
 RUN git clone https://github.com/novnc/noVNC.git /opt/noVNC \
