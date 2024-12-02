@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=:1
 
 # Update and install necessary packages
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     sudo \
     xfce4 \
     xfce4-goodies \
@@ -19,7 +19,10 @@ RUN apt-get update && apt-get install -y \
     wget \
     dbus-x11 \
     firefox-esr \
-    --no-install-recommends
+    --no-install-recommends || { apt-get clean && rm -rf /var/lib/apt/lists/*; exit 1; }
+
+# Clean up cached files to reduce image size
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
 RUN useradd -m -s /bin/bash renderuser && echo "renderuser:renderpass" | chpasswd && adduser renderuser sudo
